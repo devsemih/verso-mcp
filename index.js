@@ -14,7 +14,7 @@ const log = (...args) => process.stderr.write(`[verso-mcp] ${args.join(' ')}\n`)
 // --- CLI Args ---
 const args = process.argv.slice(2)
 let API_TOKEN = ''
-let SERVER_URL = 'https://useverso.app' // default production
+let SERVER_URL = 'https://verso.up.railway.app' // default production
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--token' && args[i + 1]) { API_TOKEN = args[++i]; continue }
@@ -30,8 +30,8 @@ for (let i = 0; i < args.length; i++) {
     verso-mcp --token=vrs_xxx --url=http://localhost:4444
 
   Options:
-    --token   API token (get from useverso.app settings)
-    --url     Server URL (default: https://useverso.app)
+    --token   API token (get from verso.up.railway.app settings)
+    --url     Server URL (default: https://verso.up.railway.app)
     --help    Show this help
 `)
     process.exit(0)
@@ -39,7 +39,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!API_TOKEN) {
-  process.stderr.write(`[verso-mcp] Error: --token is required. Get your API token from useverso.app settings.\n`)
+  process.stderr.write(`[verso-mcp] Error: --token is required. Get your API token from verso.up.railway.app settings.\n`)
   process.exit(1)
 }
 
