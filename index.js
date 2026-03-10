@@ -457,6 +457,20 @@ If targetNodeId is provided, writes into that specific node instead of replacing
       inputSchema: { type: 'object', properties: {} },
     },
     {
+      name: 'set_design_settings',
+      description: 'Update the project design system settings. Only provide the fields you want to change.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          device: { type: 'string', enum: ['iPhone 16', 'Web'], description: 'Target device.' },
+          theme: { type: 'string', enum: ['Light', 'Dark'], description: 'Color theme.' },
+          accentColor: { type: 'string', description: "Primary accent color as hex (e.g. '#FF6B35')." },
+          fontFamily: { type: 'string', description: "Primary font family (e.g. 'Inter', 'DM Sans')." },
+          iconLibrary: { type: 'string', description: "Icon set (e.g. 'Solar', 'Lucide', 'Phosphor')." },
+        },
+      },
+    },
+    {
       name: 'list_projects',
       description: 'List all your Verso projects. Returns project id, name, screen count, and last updated time.',
       inputSchema: { type: 'object', properties: {} },
