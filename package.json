@@ -1,6 +1,6 @@
 {
   "name": "verso-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for Verso — AI-powered mobile app design tool",
   "bin": {
     "verso-mcp": "./index.js"
@@ -12,6 +12,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/niceeee/verso-mcp"
+    "url": "https://github.com/devsemih/verso-mcp"
   }
 }
