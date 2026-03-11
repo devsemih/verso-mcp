@@ -1,12 +1,12 @@
 # verso-mcp
 
-MCP server for [Verso](https://verso.up.railway.app) — AI-powered mobile app design tool.
+MCP server for [Verso](https://useverso.app) — AI-powered mobile app design tool.
 
 Connects Claude Code to Verso so you can design mobile app screens with AI.
 
 ## Setup
 
-1. Get your API token from [verso.up.railway.app](https://verso.up.railway.app) (click your avatar > copy API token)
+1. Get your API token from [useverso.app](https://useverso.app) (click your avatar > copy API token)
 
 2. Add to your Claude Code MCP config (`~/.claude/mcp.json`):
 
@@ -38,7 +38,7 @@ Once connected, Claude can:
 ## Options
 
 ```
-verso-mcp --token=vrs_xxx              # Connect to verso.up.railway.app
+verso-mcp --token=vrs_xxx              # Connect to useverso.app
 verso-mcp --token=vrs_xxx --url=URL    # Connect to custom server
 ```
 

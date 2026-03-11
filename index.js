@@ -14,7 +14,7 @@ const log = (...args) => process.stderr.write(`[verso-mcp] ${args.join(' ')}\n`)
 // --- CLI Args ---
 const args = process.argv.slice(2)
 let API_TOKEN = ''
-let SERVER_URL = 'https://verso.up.railway.app' // default production
+let SERVER_URL = 'https://useverso.app' // default production
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--token' && args[i + 1]) { API_TOKEN = args[++i]; continue }
@@ -30,8 +30,8 @@ for (let i = 0; i < args.length; i++) {
     verso-mcp --token=vrs_xxx --url=http://localhost:4444
 
   Options:
-    --token   API token (get from verso.up.railway.app settings)
-    --url     Server URL (default: https://verso.up.railway.app)
+    --token   API token (get from useverso.app settings)
+    --url     Server URL (default: https://useverso.app)
     --help    Show this help
 `)
     process.exit(0)
@@ -39,7 +39,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!API_TOKEN) {
-  process.stderr.write(`[verso-mcp] Error: --token is required. Get your API token from verso.up.railway.app settings.\n`)
+  process.stderr.write(`[verso-mcp] Error: --token is required. Get your API token from useverso.app settings.\n`)
   process.exit(1)
 }
 
@@ -371,10 +371,22 @@ If targetNodeId is provided, writes into that specific node instead of replacing
           targetNodeId: { type: 'string', description: 'Optional data-ps-id to write into instead of replacing entire canvas.' },
           changeDescription: {
             type: 'string',
-            description: 'REQUIRED. Write a specific, meaningful commit-style message describing what you changed. Bad: "Design update". Good: "Add bottom tab bar with 4 tabs", "Change font to Google Sans".',
+            description: 'REQUIRED. Write a specific, meaningful commit-style message describing what you changed. Bad: "Design update", "Update screen". Good: "Add bottom tab bar with 4 tabs", "Change font to Google Sans", "Redesign hero section with gradient background", "Add search bar and category filters". This is shown in version history — the user relies on it to understand changes.',
+          },
+          designPrompt: {
+            type: 'string',
+            description: `REQUIRED on every call. The master design prompt for this project — a comprehensive English description of the app's design vision that would allow anyone to recreate it.
+
+On the FIRST write_html call: Generate this from scratch based on the user's request. Describe the app concept, visual style, color palette with hex codes, typography, layout structure, and component patterns.
+
+On SUBSEQUENT calls: Read the current designPrompt from get_design_settings and UPDATE it — add new screen descriptions, refine style notes, but preserve existing content. Never shrink or lose information.
+
+Format: Start with a 1-2 sentence app summary, then describe the visual style (colors, typography, spacing, geometry), then list each screen's structure top-to-bottom. Always in English regardless of user's language.
+
+The user can edit this prompt manually in the inspector — always respect their edits and build upon them.`,
           },
         },
-        required: ['html', 'platform', 'accentColor', 'fontFamily', 'theme', 'iconLibrary', 'changeDescription'],
+        required: ['html', 'platform', 'accentColor', 'fontFamily', 'theme', 'iconLibrary', 'changeDescription', 'designPrompt'],
       },
     },
     {
@@ -453,7 +465,7 @@ If targetNodeId is provided, writes into that specific node instead of replacing
     },
     {
       name: 'get_design_settings',
-      description: 'Returns the current design system state (theme, accentColor, iconLibrary, fontFamily, device, viewport).',
+      description: 'Returns the current design system state (theme, accentColor, iconLibrary, fontFamily, device, viewport) AND the designPrompt — the master design brief for this project. IMPORTANT: Always call this before write_html to read the current designPrompt so you can update it properly. The user may have edited the prompt manually.',
       inputSchema: { type: 'object', properties: {} },
     },
     {
