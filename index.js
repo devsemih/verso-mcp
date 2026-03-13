@@ -195,7 +195,18 @@ async function handleMessage(message) {
       if (toolName === 'open_project') {
         activeProjectId = toolArgs.projectId
         registerProject()
-        return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Switched to project ${activeProjectId}` }] } }
+        return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Switched to project ${activeProjectId}. You can now use design tools.` }] } }
+      }
+
+      // Guard: require open_project first
+      if (!activeProjectId) {
+        return {
+          jsonrpc: '2.0', id,
+          result: {
+            content: [{ type: 'text', text: 'Error: No project is open. Call open_project first with a projectId from list_projects.' }],
+            isError: true,
+          },
+        }
       }
 
       try {
@@ -449,7 +460,7 @@ The user can edit this prompt manually in the inspector — always respect their
     },
     {
       name: 'list_screens',
-      description: 'List all screens in the project with their indices and active status.',
+      description: 'List all screens in the project with their indices and active status. Requires open_project first.',
       inputSchema: { type: 'object', properties: {} },
     },
     {
@@ -465,7 +476,7 @@ The user can edit this prompt manually in the inspector — always respect their
     },
     {
       name: 'get_design_settings',
-      description: 'Returns the current design system state (theme, accentColor, iconLibrary, fontFamily, device, viewport) AND the designPrompt — the master design brief for this project. IMPORTANT: Always call this before write_html to read the current designPrompt so you can update it properly. The user may have edited the prompt manually.',
+      description: 'Returns the current design system state (theme, accentColor, iconLibrary, fontFamily, device, viewport) AND the designPrompt. Requires open_project first. IMPORTANT: Always call this before write_html to read the current designPrompt so you can update it properly.',
       inputSchema: { type: 'object', properties: {} },
     },
     {
@@ -526,7 +537,7 @@ Example input:
     },
     {
       name: 'open_project',
-      description: 'Connect to a specific Verso project by its ID. Must be called before using any design tools.',
+      description: 'Connect to a specific Verso project by its ID. ⚠️ REQUIRED: You MUST call this before ANY other tool (except list_projects). All other tools will fail if no project is open.',
       inputSchema: {
         type: 'object',
         properties: {
