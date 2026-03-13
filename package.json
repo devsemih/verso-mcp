@@ -1,6 +1,6 @@
 {
   "name": "verso-mcp",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "MCP server for Verso — AI-powered mobile app design tool",
   "bin": {
     "verso-mcp": "./index.js"

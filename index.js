@@ -483,6 +483,43 @@ The user can edit this prompt manually in the inspector — always respect their
       },
     },
     {
+      name: 'auto_prototype',
+      description: `Gather all screens' layer trees and design context in a single call for auto-prototyping analysis.
+Returns every screen's name, index, and element tree so you can determine which interactive elements (tab bar buttons, nav buttons, CTAs, cards, back arrows) should link to which screens.
+
+After analyzing, call set_links with your mapping to apply data-ps-link attributes.`,
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'set_links',
+      description: `Apply navigation links between screens in batch. Each link sets a data-ps-link attribute on an element so that clicking it navigates to the target screen.
+
+Example input:
+{ "links": [
+  { "screenIndex": 0, "nodeId": "ps-42", "targetScreen": "Cart" },
+  { "screenIndex": 1, "nodeId": "ps-7", "targetScreen": "Home" }
+]}`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          links: {
+            type: 'array',
+            description: 'Array of link mappings to apply',
+            items: {
+              type: 'object',
+              properties: {
+                screenIndex: { type: 'number', description: 'Index of the screen containing the element' },
+                nodeId: { type: 'string', description: 'The data-ps-id of the element to make clickable' },
+                targetScreen: { type: 'string', description: 'Name of the screen to navigate to (must match exactly)' },
+              },
+              required: ['screenIndex', 'nodeId', 'targetScreen'],
+            },
+          },
+        },
+        required: ['links'],
+      },
+    },
+    {
       name: 'list_projects',
       description: 'List all your Verso projects. Returns project id, name, screen count, and last updated time.',
       inputSchema: { type: 'object', properties: {} },
