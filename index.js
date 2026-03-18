@@ -15,29 +15,23 @@ const log = (...args) => process.stderr.write(`[verso-mcp] ${args.join(' ')}\n`)
 const args = process.argv.slice(2)
 let API_TOKEN = ''
 let SERVER_URL = 'https://useverso.app' // default production
-let FAL_API_KEY = ''
-
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--token' && args[i + 1]) { API_TOKEN = args[++i]; continue }
   if (args[i].startsWith('--token=')) { API_TOKEN = args[i].split('=')[1]; continue }
   if (args[i] === '--url' && args[i + 1]) { SERVER_URL = args[++i]; continue }
   if (args[i].startsWith('--url=')) { SERVER_URL = args[i].split('=')[1]; continue }
-  if (args[i] === '--fal-key' && args[i + 1]) { FAL_API_KEY = args[++i]; continue }
-  if (args[i].startsWith('--fal-key=')) { FAL_API_KEY = args[i].split('=')[1]; continue }
   if (args[i] === '--help' || args[i] === '-h') {
     process.stderr.write(`
   Verso MCP Server
 
   Usage:
     verso-mcp --token=vrs_xxx
-    verso-mcp --token=vrs_xxx --fal-key=FAL_KEY
     verso-mcp --token=vrs_xxx --url=http://localhost:4444
 
   Options:
-    --token     API token (get from useverso.app settings)
-    --fal-key   fal.ai API key for AI image generation (optional)
-    --url       Server URL (default: https://useverso.app)
-    --help      Show this help
+    --token   API token (get from useverso.app settings)
+    --url     Server URL (default: https://useverso.app)
+    --help    Show this help
 `)
     process.exit(0)
   }
@@ -53,50 +47,6 @@ function getWsUrl() {
   const url = new URL(SERVER_URL)
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${url.host}?token=${encodeURIComponent(API_TOKEN)}`
-}
-
-// --- Image Generation (fal.ai) ---
-function generateImage(prompt, size = 'square') {
-  const sizes = {
-    square: { width: 512, height: 512 },
-    landscape: { width: 768, height: 512 },
-    portrait: { width: 512, height: 768 },
-  }
-  const { width, height } = sizes[size] || sizes.square
-
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      prompt,
-      image_size: { width, height },
-      num_images: 1,
-    })
-    const req = https.request({
-      hostname: 'fal.run',
-      path: '/fal-ai/flux/schnell',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Key ${FAL_API_KEY}`,
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, (res) => {
-      let data = ''
-      res.on('data', chunk => data += chunk)
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data)
-          if (json.images && json.images.length > 0) {
-            resolve(json.images[0].url)
-          } else {
-            reject(new Error('No image returned: ' + data))
-          }
-        } catch (e) { reject(new Error('Failed to parse response: ' + data)) }
-      })
-    })
-    req.on('error', reject)
-    req.write(body)
-    req.end()
-  })
 }
 
 // --- Active project ---
@@ -242,12 +192,12 @@ async function handleMessage(message) {
       }
 
       if (toolName === 'generate_image') {
-        if (!FAL_API_KEY) {
-          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: 'Error: Image generation not configured. Add --fal-key=YOUR_KEY to the MCP command.' }], isError: true } }
-        }
         try {
-          const url = await generateImage(toolArgs.prompt, toolArgs.size)
-          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: url }] } }
+          const result = await apiRequest('POST', '/api/generate-image', { prompt: toolArgs.prompt, size: toolArgs.size })
+          if (result.url) {
+            return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: result.url }] } }
+          }
+          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Error: ${result.error || 'No image returned'}` }], isError: true } }
         } catch (err) {
           return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Error generating image: ${err.message}` }], isError: true } }
         }
