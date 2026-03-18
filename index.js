@@ -15,24 +15,29 @@ const log = (...args) => process.stderr.write(`[verso-mcp] ${args.join(' ')}\n`)
 const args = process.argv.slice(2)
 let API_TOKEN = ''
 let SERVER_URL = 'https://useverso.app' // default production
+let FAL_API_KEY = ''
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--token' && args[i + 1]) { API_TOKEN = args[++i]; continue }
   if (args[i].startsWith('--token=')) { API_TOKEN = args[i].split('=')[1]; continue }
   if (args[i] === '--url' && args[i + 1]) { SERVER_URL = args[++i]; continue }
   if (args[i].startsWith('--url=')) { SERVER_URL = args[i].split('=')[1]; continue }
+  if (args[i] === '--fal-key' && args[i + 1]) { FAL_API_KEY = args[++i]; continue }
+  if (args[i].startsWith('--fal-key=')) { FAL_API_KEY = args[i].split('=')[1]; continue }
   if (args[i] === '--help' || args[i] === '-h') {
     process.stderr.write(`
   Verso MCP Server
 
   Usage:
     verso-mcp --token=vrs_xxx
+    verso-mcp --token=vrs_xxx --fal-key=FAL_KEY
     verso-mcp --token=vrs_xxx --url=http://localhost:4444
 
   Options:
-    --token   API token (get from useverso.app settings)
-    --url     Server URL (default: https://useverso.app)
-    --help    Show this help
+    --token     API token (get from useverso.app settings)
+    --fal-key   fal.ai API key for AI image generation (optional)
+    --url       Server URL (default: https://useverso.app)
+    --help      Show this help
 `)
     process.exit(0)
   }
@@ -48,6 +53,50 @@ function getWsUrl() {
   const url = new URL(SERVER_URL)
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${url.host}?token=${encodeURIComponent(API_TOKEN)}`
+}
+
+// --- Image Generation (fal.ai) ---
+function generateImage(prompt, size = 'square') {
+  const sizes = {
+    square: { width: 512, height: 512 },
+    landscape: { width: 768, height: 512 },
+    portrait: { width: 512, height: 768 },
+  }
+  const { width, height } = sizes[size] || sizes.square
+
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      prompt,
+      image_size: { width, height },
+      num_images: 1,
+    })
+    const req = https.request({
+      hostname: 'fal.run',
+      path: '/fal-ai/flux/schnell',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Key ${FAL_API_KEY}`,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let data = ''
+      res.on('data', chunk => data += chunk)
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data)
+          if (json.images && json.images.length > 0) {
+            resolve(json.images[0].url)
+          } else {
+            reject(new Error('No image returned: ' + data))
+          }
+        } catch (e) { reject(new Error('Failed to parse response: ' + data)) }
+      })
+    })
+    req.on('error', reject)
+    req.write(body)
+    req.end()
+  })
 }
 
 // --- Active project ---
@@ -189,6 +238,18 @@ async function handleMessage(message) {
           return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text }] } }
         } catch (err) {
           return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Error: ${err.message}` }], isError: true } }
+        }
+      }
+
+      if (toolName === 'generate_image') {
+        if (!FAL_API_KEY) {
+          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: 'Error: Image generation not configured. Add --fal-key=YOUR_KEY to the MCP command.' }], isError: true } }
+        }
+        try {
+          const url = await generateImage(toolArgs.prompt, toolArgs.size)
+          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: url }] } }
+        } catch (err) {
+          return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `Error generating image: ${err.message}` }], isError: true } }
         }
       }
 
@@ -344,10 +405,10 @@ IMPORTANT: The renderer is an iframe sized to the phone frame (393x852). Use w-f
 </div>
 
 === IMAGES ===
-NEVER use emoji as image placeholders. Use real photos:
+NEVER use emoji as image placeholders. Use real images:
 - Avatars: https://i.pravatar.cc/SIZE?u=UNIQUE_NAME
-- Products/Content: https://picsum.photos/W/H?random=N
-- Specific: https://images.unsplash.com/photo-PHOTO_ID?w=W&h=H&fit=crop
+- Contextual images (hero, illustrations, products, food, backgrounds): use the generate_image tool to create AI images that match the app's theme. Call generate_image BEFORE write_html, then use the returned URL in your <img> tags.
+- Fallback only: https://picsum.photos/W/H?random=N (if generate_image is unavailable)
 All images: object-cover, proper border-radius, aspect ratios.
 
 === QUALITY RULES ===
@@ -528,6 +589,33 @@ Example input:
           },
         },
         required: ['links'],
+      },
+    },
+    {
+      name: 'generate_image',
+      description: `Generate a custom AI image using Flux Schnell. Returns a URL you can use in <img src="...">.
+Use this instead of picsum.photos/unsplash for contextual images like:
+- App illustrations, hero images, onboarding graphics
+- Food photos, product images, lifestyle shots
+- Backgrounds, patterns, mascots, characters
+- Any image that should match the app's specific theme/context
+
+Do NOT use for: maps, screenshots, icons, UI elements, text-heavy graphics.
+Write detailed prompts: "flat illustration of a cozy coffee shop interior, warm tones, minimal style" not "coffee shop".`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'Detailed image description. Include style (flat illustration, photo, 3D render), subject, mood, colors.',
+          },
+          size: {
+            type: 'string',
+            enum: ['square', 'landscape', 'portrait'],
+            description: 'Image aspect ratio. square=512x512, landscape=768x512, portrait=512x768. Default: square.',
+          },
+        },
+        required: ['prompt'],
       },
     },
     {
