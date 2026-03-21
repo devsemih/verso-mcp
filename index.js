@@ -193,7 +193,7 @@ async function handleMessage(message) {
 
       if (toolName === 'generate_image') {
         try {
-          const result = await apiRequest('POST', '/api/generate-image', { prompt: toolArgs.prompt, size: toolArgs.size })
+          const result = await apiRequest('POST', '/api/generate-image', { prompt: toolArgs.prompt, size: toolArgs.size, transparent: toolArgs.transparent })
           if (result.url) {
             return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: result.url }] } }
           }
@@ -550,6 +550,8 @@ Use this instead of picsum.photos/unsplash for contextual images like:
 - Backgrounds, patterns, mascots, characters
 - Any image that should match the app's specific theme/context
 
+Set transparent=true for mascots, characters, stickers, icons, or any image that needs to be overlaid on a UI (no background). Keep transparent=false for full backgrounds, photos, and scenes.
+
 Do NOT use for: maps, screenshots, icons, UI elements, text-heavy graphics.
 Write detailed prompts: "flat illustration of a cozy coffee shop interior, warm tones, minimal style" not "coffee shop".`,
       inputSchema: {
@@ -563,6 +565,10 @@ Write detailed prompts: "flat illustration of a cozy coffee shop interior, warm 
             type: 'string',
             enum: ['square', 'landscape', 'portrait'],
             description: 'Image aspect ratio. square=512x512, landscape=768x512, portrait=512x768. Default: square.',
+          },
+          transparent: {
+            type: 'boolean',
+            description: 'Remove background to get a transparent PNG. Use for mascots, characters, stickers, or any element overlaid on UI. Default: false.',
           },
         },
         required: ['prompt'],
